@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate diesel;
 
-use actix_web::{App, HttpServer, middleware};
+use actix_web::{App, HttpServer, middleware, web::Data};
 use env_logger::Env;
 
 pub mod route;
@@ -17,7 +17,7 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(move || {
         App::new()
             .wrap(middleware::Logger::default())
-            .data(pool.clone())
+            .app_data(Data::new(pool.clone()))
             .service(route::hello_route::hello)
     })
     .bind("127.0.0.1:8080")?
