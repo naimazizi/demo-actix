@@ -1,17 +1,18 @@
-use diesel::prelude::*;
-use diesel::r2d2::{self, ConnectionManager, Pool};
 use dotenv::dotenv;
+use sqlx::any::AnyPoolOptions;
 
-pub type DbPool = r2d2::Pool<ConnectionManager<SqliteConnection>>;
+pub type DbPool = sqlx::AnyPool;
 
-pub fn establish_connection() -> Pool<ConnectionManager<SqliteConnection>>{
+
+pub async fn establish_connection() -> sqlx::AnyPool {
     dotenv().ok();
 
     // Create connection pool
-    let connspec = std::env::var("DATABASE_URL").expect("DATABASE_URL");
-    let manager = ConnectionManager::<SqliteConnection>::new(connspec);
-    let pool = r2d2::Pool::builder()
-        .build(manager)
-        .expect("Failed to create pool.");
+    let connspec = std::env::var("DATABASE_URL").expect("DATABASE_URL is missing");
+    let pool = AnyPoolOptions::new()
+        .max_connections(1)
+        .connect(&connspec)
+        .await
+        .expect("ERROR Creating DB Pool");
     pool
 }

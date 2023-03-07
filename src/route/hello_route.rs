@@ -1,11 +1,12 @@
 use actix_web::{get, HttpResponse, Responder, web};
-use crate::config::database::DbPool;
 use crate::service::ping_service::ping;
+use crate::AppState;
 use log::{error, info};
 
+
 #[get("/")]
-pub async fn hello(pool: web::Data<DbPool>) -> impl Responder {
-    let pong = ping(&pool).await.map_err(|_e| {
+pub async fn hello(state: web::Data<AppState>) -> impl Responder {
+    let pong = ping(state).await.map_err(|_e| {
         error!("Error in pinging database");
         HttpResponse::InternalServerError().finish()
     });

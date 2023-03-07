@@ -12,7 +12,7 @@ actix-web-httpauth = "0.8.0"
 actix-web-grants = "3.0.1"
 actix-cors = "0.6.4"
 awc = "3.1.1"
-diesel = { version = "2.0.3", features = ["r2d2","sqlite"] }
+sqlx = { version = "0.6.2", features = ["mysql", "sqlite", "runtime-actix-native-tls", "any"]}
 dotenv = "0.15.0"
 log = "0.4.17"
 env_logger = "0.10.0"

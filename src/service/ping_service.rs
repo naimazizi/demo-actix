@@ -1,17 +1,15 @@
-use actix_web::{web};
-use diesel::RunQueryDsl;
-use diesel::sql_types::BigInt;
-use crate::config::database::DbPool;
+use actix_web::web;
 
-#[derive(QueryableByName, PartialEq, Debug)]
+use crate::AppState;
+
+#[derive(sqlx::FromRow, Clone, Copy)]
 pub struct QueryResult {
-    #[diesel(sql_type = BigInt)]
-    pub col1: i64,
+    pub col1: i32,
 }
 
-pub async fn ping(pool: &web::Data<DbPool>) -> Result<QueryResult, diesel::result::Error>{
-    let mut conn = pool.get().unwrap();
-    let ping = web::block(move || diesel::sql_query("select 1 as col1").get_result::<QueryResult>(&mut conn))
-        .await;
-    ping.unwrap()
-}
+pub async fn ping(state: web::Data<AppState>) -> Result<QueryResult, sqlx::Error> {
+    let result = sqlx::query_as::<_, QueryResult>("SELECT 1 as col1")
+        .fetch_all(&state.pool)
+        .await?;
+    Ok(result[0])
+} 
