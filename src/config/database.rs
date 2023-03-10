@@ -1,17 +1,11 @@
-use dotenv::dotenv;
-use sqlx::any::AnyPoolOptions;
+use sqlx::mysql::MySqlPoolOptions;
 
-pub type DbPool = sqlx::AnyPool;
+use super::config::Config;
 
-
-pub async fn establish_connection() -> sqlx::AnyPool {
-    dotenv().ok();
-
-    // Create connection pool
-    let connspec = std::env::var("DATABASE_URL").expect("DATABASE_URL is missing");
-    let pool = AnyPoolOptions::new()
+pub async fn establish_connection(config: &Config) -> sqlx::MySqlPool {
+    let pool = MySqlPoolOptions::new()
         .max_connections(1)
-        .connect(&connspec)
+        .connect(&config.database_url)
         .await
         .expect("ERROR Creating DB Pool");
     pool
