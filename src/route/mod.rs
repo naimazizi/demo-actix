@@ -1,2 +1,2 @@
-pub mod hello_route;
+pub mod health_check;
 pub mod auth;

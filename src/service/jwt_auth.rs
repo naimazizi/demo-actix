@@ -1,73 +1,65 @@
-use core::fmt;
-use std::future::{ready, Ready};
-
+use actix_web::dev::ServiceRequest;
 use actix_web::error::ErrorUnauthorized;
-use actix_web::{dev::Payload, Error as ActixWebError};
-use actix_web::{http, web, FromRequest, HttpMessage, HttpRequest};
-use jsonwebtoken::{decode, DecodingKey, Validation};
-use serde::Serialize;
+use actix_web::{Error, web, HttpMessage};
+use actix_web_grants::permissions::AttachPermissions;
+use actix_web_httpauth::extractors::bearer::BearerAuth;
+use chrono::{Duration, Utc};
+use jsonwebtoken::{DecodingKey, Validation, EncodingKey, Header};
+use serde::{Serialize, Deserialize};
 
 use crate::AppState;
-use crate::model::user::TokenClaims;
 
-#[derive(Debug, Serialize)]
-struct ErrorResponse {
-    status: String,
-    message: String,
+const JWT_EXPIRATION_HOURS: i64 = 24;
+
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct Claims {
+    pub email: String,
+    pub permissions: Vec<String>,
+    exp: i64,
 }
 
-impl fmt::Display for ErrorResponse {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", serde_json::to_string(&self).unwrap())
+impl Claims {
+    pub fn new(email: String, permissions: Vec<String>) -> Self {
+        Self {
+            email,
+            permissions,
+            exp: (Utc::now() + Duration::hours(JWT_EXPIRATION_HOURS)).timestamp(),
+        }
     }
+}
+
+/// Create a json web token (JWT)
+pub fn create_jwt(claims: Claims, jwt_secret_key: &String) -> Result<String, Error> {
+    let encoding_key = EncodingKey::from_secret(jwt_secret_key.as_ref());
+    jsonwebtoken::encode(&Header::default(), &claims, &encoding_key)
+        .map_err(|e| ErrorUnauthorized(e.to_string()))
+}
+
+/// Decode a json web token (JWT)
+pub fn decode_jwt(token: &str, jwt_secret_key: &String) -> Result<Claims, Error> {
+    let decoding_key = DecodingKey::from_secret(jwt_secret_key.as_ref());
+    jsonwebtoken::decode::<Claims>(token, &decoding_key, &Validation::default())
+        .map(|data| data.claims)
+        .map_err(|e| ErrorUnauthorized(e.to_string()))
 }
 
 pub struct JwtMiddleware {
     pub user_id: uuid::Uuid,
+    pub role: String,
 }
 
-impl FromRequest for JwtMiddleware {
-    type Error = ActixWebError;
-    type Future = Ready<Result<Self, Self::Error>>;
-    fn from_request(req: &HttpRequest, _: &mut Payload) -> Self::Future {
-        let data = req.app_data::<web::Data<AppState>>().unwrap();
-
-        let token = req
-            .cookie("token")
-            .map(|c| c.value().to_string())
-            .or_else(|| {
-                req.headers()
-                    .get(http::header::AUTHORIZATION)
-                    .map(|h| h.to_str().unwrap().split_at(7).1.to_string())
-            });
-
-        if token.is_none() {
-            let json_error = ErrorResponse {
-                status: "fail".to_string(),
-                message: "You are not logged in, please provide token".to_string(),
-            };
-            return ready(Err(ErrorUnauthorized(json_error)));
+pub async fn validator(req: ServiceRequest, credentials: BearerAuth) -> Result<ServiceRequest, (Error, ServiceRequest)> {
+    // We just get permissions from JWT
+    let data = req.app_data::<web::Data<AppState>>().unwrap();
+    let result = decode_jwt(credentials.token(), &data.env.jwt_secret);
+    match result {
+        Ok(claims) => {
+            req.attach(claims.permissions.to_owned());
+            req.extensions_mut().insert(claims);
+            Ok(req)
         }
-
-        let claims = match decode::<TokenClaims>(
-            &token.unwrap(),
-            &DecodingKey::from_secret(data.env.jwt_secret.as_ref()),
-            &Validation::default(),
-        ) {
-            Ok(c) => c.claims,
-            Err(_) => {
-                let json_error = ErrorResponse {
-                    status: "fail".to_string(),
-                    message: "Invalid token".to_string(),
-                };
-                return ready(Err(ErrorUnauthorized(json_error)));
-            }
-        };
-
-        let user_id = uuid::Uuid::parse_str(claims.sub.as_str()).unwrap();
-        req.extensions_mut()
-            .insert::<uuid::Uuid>(user_id.to_owned());
-
-        ready(Ok(JwtMiddleware { user_id }))
+        // required by `actix-web-httpauth` validator signature
+        Err(e) => Err((e, req))
     }
 }

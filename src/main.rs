@@ -1,4 +1,4 @@
-use actix_web::{App, HttpServer, middleware, web::Data};
+use actix_web::{App, HttpServer, middleware, web::{Data, scope}};
 use config::config::Config;
 use env_logger::Env;
 use dotenv::dotenv;
@@ -9,6 +9,7 @@ pub mod service;
 pub mod model;
 pub mod dto;
 pub mod dao;
+pub mod constant;
 
 
 pub struct AppState{
@@ -33,8 +34,11 @@ async fn main() -> std::io::Result<()> {
                     env: config.clone(),
                 }
             ))
-            .service(route::hello_route::hello)
-            .configure(route::auth::config)
+            .service(
+                scope("/api")
+                    .configure(route::auth::config)
+            )
+            .service(route::health_check::ping)
     })
     .bind("127.0.0.1:8080")?
     .run()

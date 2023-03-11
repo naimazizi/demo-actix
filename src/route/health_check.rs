@@ -1,12 +1,14 @@
 use actix_web::{get, HttpResponse, Responder, web};
-use crate::service::ping_service::ping;
-use crate::AppState;
 use log::{error, info};
 
+use crate::{
+    AppState,
+    service::ping_service
+};
 
-#[get("/")]
-pub async fn hello(state: web::Data<AppState>) -> impl Responder {
-    let pong = ping(state).await.map_err(|_e| {
+#[get("/health_check")]
+pub async fn ping(state: web::Data<AppState>) -> impl Responder {
+    let pong = ping_service::ping(state).await.map_err(|_e| {
         error!("Error in pinging database");
         HttpResponse::InternalServerError().finish()
     });

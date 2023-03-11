@@ -1,23 +1,23 @@
-use crate::{
-    service::jwt_auth,
-    model::{user::{LoginUserSchema, RegisterUserSchema, TokenClaims, User}, response::FilteredUser},
-    dao::user::{check_existing_user, insert_new_user, get_user_by_email, get_user_by_id},
-    AppState,
-};
 use actix_web::{
-    cookie::{time::Duration as ActixWebDuration, Cookie},
-    get, post, web, HttpMessage, HttpRequest, HttpResponse, Responder,
+    get, post, web, HttpResponse, Responder,
 };
+use actix_web_grants::proc_macro::has_any_permission;
+use actix_web_httpauth::middleware::HttpAuthentication;
 use argon2::{
     password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
     Argon2,
 };
-use chrono::{prelude::*, Duration};
-use jsonwebtoken::{encode, EncodingKey, Header};
 use serde_json::json;
 
+use crate::{
+    service::jwt_auth::{Claims, create_jwt, validator},
+    model::{user::{LoginUserSchema, RegisterUserSchema, User}, response::FilteredUser},
+    dao::user::{check_existing_user, insert_new_user, get_user_by_email},
+    AppState,
+};
 
-#[post("/auth/register")]
+
+#[post("/register")]
 async fn register_user_handler(
     body: web::Json<RegisterUserSchema>,
     data: web::Data<AppState>,
@@ -66,11 +66,12 @@ fn filter_user_record(user: &User) -> FilteredUser {
 }
 
 
-#[post("/auth/login")]
+#[post("/login")]
 async fn login_user_handler(
     body: web::Json<LoginUserSchema>,
     data: web::Data<AppState>,
 ) -> impl Responder {
+
     let query_result = get_user_by_email(&body.email, &data.pool).await.unwrap();
 
     let is_valid = query_result.to_owned().map_or(false, |user| {
@@ -87,45 +88,38 @@ async fn login_user_handler(
 
     let user = query_result.unwrap();
 
-    let now = Utc::now();
-    let iat = now.timestamp() as usize;
-    let exp = (now + Duration::minutes(60)).timestamp() as usize;
-    let claims: TokenClaims = TokenClaims {
-        sub: user.id.to_string(),
-        exp,
-        iat,
-    };
-
-    let token = encode(
-        &Header::default(),
-        &claims,
-        &EncodingKey::from_secret(data.env.jwt_secret.as_ref()),
-    )
-    .unwrap();
-
-    let cookie = Cookie::build("token", token.to_owned())
-        .path("/")
-        .max_age(ActixWebDuration::new(60 * 60, 0))
-        .http_only(true)
-        .finish();
-
-    HttpResponse::Ok()
-        .cookie(cookie)
-        .json(json!({"status": "success", "token": token}))
+    let claims = Claims::new(user.email.to_owned(), vec![user.role.to_owned()]);
+    let token = create_jwt(claims, &data.env.jwt_secret);
+    match token {
+        Ok(token_str) => {
+            HttpResponse::Ok()
+                .json(json!({"status": "success", "token": token_str}))
+        }
+        Err(_) => {
+            HttpResponse::InternalServerError()
+                .json(json!({"status": "fail", "token": "failed to generate token"}))
+        }
+    }
+    
 }
 
 
-#[get("/auth/me")]
+#[get("")]
+#[has_any_permission("ROLE_USER", "ROLE_ADMIN")]
 async fn get_me_handler(
-    req: HttpRequest,
+    opt_claims: Option<web::ReqData<Claims>>,
     data: web::Data<AppState>,
-    _: jwt_auth::JwtMiddleware,
 ) -> impl Responder {
-    let ext = req.extensions();
-    let user_id = ext.get::<uuid::Uuid>().unwrap();
 
-    let opt_user = get_user_by_id(user_id, &data.pool).await.unwrap();
-
+    let opt_user = match opt_claims {
+        Some(claim) => {
+            get_user_by_email(&claim.email, &data.pool).await.unwrap()
+        }
+        None => {
+            None
+        }
+    };
+    
     match opt_user {
         Some(user) => {
             let json_response = serde_json::json!({
@@ -140,7 +134,7 @@ async fn get_me_handler(
         None => {
             let json_response = serde_json::json!({
                 "status":  "fail",
-                "data": format!("user ID {} is not found", user_id.to_string())
+                "data": format!("User is not found")
             });
         
             HttpResponse::InternalServerError().json(json_response)
@@ -150,10 +144,15 @@ async fn get_me_handler(
 
 
 pub fn config(conf: &mut web::ServiceConfig) {
-    let scope = web::scope("/api")
-        .service(register_user_handler)
-        .service(login_user_handler)
+    let auth = HttpAuthentication::bearer(validator);
+    let secured_scope = web::scope("/auth/whoami")
+        .wrap(auth)
         .service(get_me_handler);
 
-    conf.service(scope);
+    let unsecured_scope = web::scope("/auth")
+    .service(register_user_handler)
+    .service(login_user_handler);
+
+    conf.service(secured_scope);
+    conf.service(unsecured_scope);
 }
