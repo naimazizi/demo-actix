@@ -1,20 +1,23 @@
-use actix_web::{App, HttpServer, middleware, web::{Data, scope}};
+use actix_web::{
+    middleware,
+    web::{scope, Data},
+    App, HttpServer,
+};
 use config::config::Config;
-use env_logger::Env;
 use dotenv::dotenv;
+use env_logger::Env;
 
-pub mod route;
 pub mod config;
-pub mod service;
-pub mod model;
-pub mod dto;
-pub mod dao;
 pub mod constant;
+pub mod dao;
+pub mod dto;
+pub mod model;
+pub mod route;
+pub mod service;
 
-
-pub struct AppState{
+pub struct AppState {
     pool: sqlx::MySqlPool,
-    env: Config
+    env: Config,
 }
 
 #[actix_web::main]
@@ -28,16 +31,11 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(move || {
         App::new()
             .wrap(middleware::Logger::default())
-            .app_data(Data::new(
-                AppState {
-                    pool: pool.clone(),
-                    env: config.clone(),
-                }
-            ))
-            .service(
-                scope("/api")
-                    .configure(route::auth::config)
-            )
+            .app_data(Data::new(AppState {
+                pool: pool.clone(),
+                env: config.clone(),
+            }))
+            .service(scope("/api").configure(route::auth::config))
             .service(route::health_check::ping)
     })
     .bind("127.0.0.1:8080")?

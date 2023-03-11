@@ -1,10 +1,7 @@
-use actix_web::{get, HttpResponse, Responder, web};
+use actix_web::{get, web, HttpResponse, Responder};
 use log::{error, info};
 
-use crate::{
-    AppState,
-    service::ping_service
-};
+use crate::{service::ping_service, AppState};
 
 #[get("/health_check")]
 pub async fn ping(state: web::Data<AppState>) -> impl Responder {
@@ -13,5 +10,8 @@ pub async fn ping(state: web::Data<AppState>) -> impl Responder {
         HttpResponse::InternalServerError().finish()
     });
     info!("Succes in pinging database");
-    HttpResponse::Ok().body(format!("Hello world! Succesfully connected to Database! Query Results: {}", &pong.unwrap().col1))
+    HttpResponse::Ok().body(format!(
+        "Hello world! Succesfully connected to Database! Query Results: {}",
+        &pong.unwrap().col1
+    ))
 }

@@ -12,4 +12,4 @@ pub async fn ping(state: web::Data<AppState>) -> Result<QueryResult, sqlx::Error
         .fetch_all(&state.pool)
         .await?;
     Ok(result[0])
-} 
+}

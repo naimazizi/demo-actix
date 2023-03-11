@@ -1,16 +1,15 @@
 use actix_web::dev::ServiceRequest;
 use actix_web::error::ErrorUnauthorized;
-use actix_web::{Error, web, HttpMessage};
+use actix_web::{web, Error, HttpMessage};
 use actix_web_grants::permissions::AttachPermissions;
 use actix_web_httpauth::extractors::bearer::BearerAuth;
 use chrono::{Duration, Utc};
-use jsonwebtoken::{DecodingKey, Validation, EncodingKey, Header};
-use serde::{Serialize, Deserialize};
+use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation};
+use serde::{Deserialize, Serialize};
 
 use crate::AppState;
 
 const JWT_EXPIRATION_HOURS: i64 = 24;
-
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Claims {
@@ -49,7 +48,10 @@ pub struct JwtMiddleware {
     pub role: String,
 }
 
-pub async fn validator(req: ServiceRequest, credentials: BearerAuth) -> Result<ServiceRequest, (Error, ServiceRequest)> {
+pub async fn validator(
+    req: ServiceRequest,
+    credentials: BearerAuth,
+) -> Result<ServiceRequest, (Error, ServiceRequest)> {
     // We just get permissions from JWT
     let data = req.app_data::<web::Data<AppState>>().unwrap();
     let result = decode_jwt(credentials.token(), &data.env.jwt_secret);
@@ -60,6 +62,6 @@ pub async fn validator(req: ServiceRequest, credentials: BearerAuth) -> Result<S
             Ok(req)
         }
         // required by `actix-web-httpauth` validator signature
-        Err(e) => Err((e, req))
+        Err(e) => Err((e, req)),
     }
 }
