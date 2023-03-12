@@ -37,6 +37,7 @@ async fn main() -> std::io::Result<()> {
             }))
             .service(scope("/api").configure(route::auth::config))
             .service(route::health_check::ping)
+            .service(route::health_check::upload_image)
     })
     .bind("127.0.0.1:8080")?
     .run()

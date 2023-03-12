@@ -15,3 +15,7 @@ Cargo.lock
 
 /target
 *.db
+
+.compressed
+.upload
+.DS_Store
