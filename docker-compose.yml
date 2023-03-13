@@ -1,0 +1,37 @@
+version: '3'
+
+services:
+
+  core-db:
+    container_name: core-db
+    restart: always
+    image: mariadb
+    environment:
+      MARIADB_USER: user
+      MARIADB_PASSWORD: root
+      MARIADB_ROOT_PASSWORD: root
+      MARIADB_DATABASE: actix_demo
+    ports:
+      - 3306:3306
+    networks:
+      - db-net
+
+  core-api: 
+    container_name: core-api
+    restart: always
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - RUST_BACKTRACE=1
+      - DATABASE_URL=mysql://root:root@core-db:3306/actix_demo
+    ports:
+      - 8080:8080
+    depends_on:
+      - core-db
+    networks:
+      - db-net
+
+networks:
+  db-net:
+

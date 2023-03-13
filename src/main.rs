@@ -39,7 +39,7 @@ async fn main() -> std::io::Result<()> {
             .service(route::health_check::ping)
             .service(route::health_check::upload_image)
     })
-    .bind("127.0.0.1:8080")?
+    .bind("0.0.0.0:8080")?
     .run()
     .await
 }

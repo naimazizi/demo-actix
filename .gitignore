@@ -19,3 +19,4 @@ Cargo.lock
 .compressed
 .upload
 .DS_Store
+.env
