@@ -41,6 +41,6 @@ docker compose up
 - [x] Containerization (Docker)
 - [x] Image Upload & compression
 - [x] Static file serving
-- [] Consume external API
-- [] Send Email
-- [] Cache
+- [ ] Consume external API
+- [ ] Send Email
+- [ ] Cache
