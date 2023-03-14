@@ -43,11 +43,6 @@ pub fn decode_jwt(token: &str, jwt_secret_key: &String) -> Result<Claims, Error>
         .map_err(|e| ErrorUnauthorized(e.to_string()))
 }
 
-pub struct JwtMiddleware {
-    pub user_id: uuid::Uuid,
-    pub role: String,
-}
-
 pub async fn validator(
     req: ServiceRequest,
     credentials: BearerAuth,
