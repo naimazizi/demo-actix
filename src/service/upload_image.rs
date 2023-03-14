@@ -11,23 +11,28 @@ use std::{
 use tokio::fs;
 use tokio::io::AsyncWriteExt as _;
 use uuid::Uuid;
+use slug::slugify;
+
+use crate::constant::{TEMP_PATH, ASSETS_PATH};
+
 
 pub async fn upload_images(mut payload: Multipart) -> Result<(), Box<dyn Error>> {
     let max_file_count: usize = 3;
     // let max_file_size: usize = 100_000;
     let legal_filetypes: [Mime; 3] = [IMAGE_PNG, IMAGE_JPEG, IMAGE_GIF];
     let mut current_count: usize = 0;
-    let dir: &str = "./.upload/";
+    let temp_folder: String = format!("./{}", TEMP_PATH);
+    let assets_folder: String = format!("./{}", ASSETS_PATH);
 
-    if !Path::new("./.upload").exists() {
-        match fs::create_dir("./.upload").await {
+    if !Path::new(&temp_folder.as_str()).exists() {
+        match fs::create_dir(&temp_folder.as_str()).await {
             Ok(_) => {}
             Err(_) => {}
         };
     }
 
-    if !Path::new("./.compressed").exists() {
-        match fs::create_dir("./.compressed").await {
+    if !Path::new(&assets_folder.as_str()).exists() {
+        match fs::create_dir(&assets_folder.as_str()).await {
             Ok(_) => {}
             Err(_) => {}
         };
@@ -48,34 +53,27 @@ pub async fn upload_images(mut payload: Multipart) -> Result<(), Box<dyn Error>>
                 continue;
             }
 
-            let destination: String = format!(
-                "{}{}-{}",
-                dir,
+            let img_name = field.content_disposition().get_filename().unwrap();
+            let img_path = Path::new(&img_name);
+            let img_ext = img_path.extension().unwrap().to_str().unwrap();
+
+            let uploaded_img: String = format!(
+                "{}/{}-{}.{}",
+                &temp_folder.as_str(),
                 Uuid::new_v4(),
-                field.content_disposition().get_filename().unwrap()
+                slugify(img_path.file_stem().unwrap().to_str().unwrap()),
+                img_ext
             );
 
-            let mut saved_file: fs::File = fs::File::create(&destination).await.unwrap();
+            let mut saved_file: fs::File = fs::File::create(&uploaded_img).await.unwrap();
             while let Ok(Some(chunk)) = field.try_next().await {
                 let _ = saved_file.write_all(&chunk).await.unwrap();
             }
 
-            let destination_path = Path::new(&destination);
-            let compressed_file_path = format!(
-                "{}/.compressed",
-                destination_path
-                    .parent()
-                    .unwrap()
-                    .parent()
-                    .unwrap()
-                    .to_str()
-                    .unwrap(),
-            );
+            let dest_img = PathBuf::from(&assets_folder);
+            let origin_img = PathBuf::from(&uploaded_img);
 
-            let dest = PathBuf::from(compressed_file_path);
-            let origin = PathBuf::from(&destination);
-
-            let mut comp = Compressor::new(origin, dest);
+            let mut comp = Compressor::new(origin_img, dest_img);
             comp.set_delete_origin(true);
             comp.set_factor(Factor::new(75., 0.7));
             match comp.compress_to_jpg() {

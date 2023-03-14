@@ -16,7 +16,7 @@ Cargo.lock
 /target
 *.db
 
-.compressed
-.upload
+.assets
+.temp
 .DS_Store
 .env

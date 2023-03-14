@@ -3,6 +3,7 @@ use actix_web::{
     web::{scope, Data},
     App, HttpServer,
 };
+use actix_files as fs;
 use config::config::Config;
 use dotenv::dotenv;
 use env_logger::Env;
@@ -14,6 +15,8 @@ pub mod dto;
 pub mod model;
 pub mod route;
 pub mod service;
+
+use crate::constant::ASSETS_PATH;
 
 pub struct AppState {
     pool: sqlx::MySqlPool,
@@ -38,6 +41,7 @@ async fn main() -> std::io::Result<()> {
             .service(scope("/api").configure(route::auth::config))
             .service(route::health_check::ping)
             .service(route::health_check::upload_image)
+            .service(fs::Files::new("/assets", format!("./{}", ASSETS_PATH )).show_files_listing())
     })
     .bind("0.0.0.0:8080")?
     .run()

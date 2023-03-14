@@ -12,6 +12,7 @@ actix-web-httpauth = "0.8.0"
 actix-web-grants = "3.0.1"
 actix-cors = "0.6.4"
 actix-multipart = "0.6.0"
+actix-files = "0.6.2"
 tokio = { version = "1.24.1", features = ["fs"] }
 awc = "3.1.1"
 sqlx = { version = "0.6.2", features = ["mysql", "runtime-actix-native-tls", "chrono", "uuid"]}
