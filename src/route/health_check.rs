@@ -3,7 +3,8 @@ use actix_web::{get, post, web, HttpResponse, Responder};
 use log::{error, info};
 
 use crate::{
-    service::{ping_service, upload_image::upload_images},
+    model::response::GeneralResponse,
+    service::{errors::AppError, ping_service, upload_image::upload_images},
     AppState,
 };
 
@@ -23,8 +24,13 @@ pub async fn ping(state: web::Data<AppState>) -> impl Responder {
 #[post("/upload")]
 pub async fn upload_image(payload: Multipart) -> impl Responder {
     let is_success = upload_images(payload).await;
-    match is_success {
-        Ok(_) => HttpResponse::Ok(),
-        Err(_) => HttpResponse::InternalServerError(),
-    }
+    _ = is_success.map_err(|e| AppError::InternalError {
+        message: e.to_string(),
+    });
+    let resp: GeneralResponse<()> = GeneralResponse {
+        status: "success".to_string(),
+        message: "successufully upload image".to_string(),
+        data: None,
+    };
+    HttpResponse::Ok().json(resp)
 }

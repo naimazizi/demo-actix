@@ -24,3 +24,10 @@ pub struct UserResponse {
     pub status: String,
     pub data: UserData,
 }
+
+#[derive(Serialize, Debug)]
+pub struct GeneralResponse<T> {
+    pub status: String,
+    pub message: String,
+    pub data: Option<T>,
+}

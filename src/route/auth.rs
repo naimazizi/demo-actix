@@ -1,4 +1,4 @@
-use actix_web::{get, post, web, HttpResponse, Responder};
+use actix_web::{get, post, web, HttpResponse};
 use actix_web_grants::proc_macro::has_any_permission;
 use actix_web_httpauth::middleware::HttpAuthentication;
 use argon2::{
@@ -10,10 +10,13 @@ use serde_json::json;
 use crate::{
     dao::user::{check_existing_user, get_user_by_email, insert_new_user},
     model::{
-        response::FilteredUser,
+        response::{FilteredUser, GeneralResponse},
         user::{LoginUserSchema, RegisterUserSchema, User},
     },
-    service::jwt_auth::{create_jwt, validator, Claims},
+    service::{
+        errors::AppError,
+        jwt_auth::{create_jwt, validator, Claims},
+    },
     AppState,
 };
 
@@ -21,13 +24,13 @@ use crate::{
 async fn register_user_handler(
     body: web::Json<RegisterUserSchema>,
     data: web::Data<AppState>,
-) -> impl Responder {
+) -> Result<HttpResponse, AppError> {
     let exists: bool = check_existing_user(&body.email, &data.pool).await;
 
     if exists {
-        return HttpResponse::Conflict().json(
-            serde_json::json!({"status": "fail","message": "User with that email already exists"}),
-        );
+        return Err(AppError::BadRequest {
+            message: "User with that email already exists".to_string(),
+        });
     }
 
     let salt = SaltString::generate(&mut OsRng);
@@ -38,17 +41,18 @@ async fn register_user_handler(
     let query_result = insert_new_user(&body.name, &body.email, &hashed_password, &data.pool).await;
 
     match query_result {
-        Ok(user) => {
-            let user_response = serde_json::json!({"status": "success","data": serde_json::json!({
-                "user": filter_user_record(&user)
-            })});
+        Ok(u) => {
+            let user_response = GeneralResponse {
+                status: "success".to_string(),
+                message: "succesfully get current user".to_string(),
+                data: Some(filter_user_record(&u)),
+            };
 
-            return HttpResponse::Ok().json(user_response);
+            return Ok(HttpResponse::Ok().json(user_response));
         }
-        Err(e) => {
-            return HttpResponse::InternalServerError()
-                .json(serde_json::json!({"status": "error","message": format!("{:?}", e)}));
-        }
+        Err(e) => Err(AppError::InternalError {
+            message: e.to_string(),
+        }),
     }
 }
 
@@ -69,7 +73,7 @@ fn filter_user_record(user: &User) -> FilteredUser {
 async fn login_user_handler(
     body: web::Json<LoginUserSchema>,
     data: web::Data<AppState>,
-) -> impl Responder {
+) -> Result<HttpResponse, AppError> {
     let query_result = get_user_by_email(&body.email, &data.pool).await.unwrap();
 
     let is_valid = query_result.to_owned().map_or(false, |user| {
@@ -80,8 +84,9 @@ async fn login_user_handler(
     });
 
     if !is_valid {
-        return HttpResponse::BadRequest()
-            .json(json!({"status": "fail", "message": "Invalid email or password"}));
+        return Err(AppError::BadRequest {
+            message: "Invalid email or password".to_string(),
+        });
     }
 
     let user = query_result.unwrap();
@@ -89,9 +94,12 @@ async fn login_user_handler(
     let claims = Claims::new(user.email.to_owned(), vec![user.role.to_owned()]);
     let token = create_jwt(claims, &data.env.jwt_secret);
     match token {
-        Ok(token_str) => HttpResponse::Ok().json(json!({"status": "success", "token": token_str})),
-        Err(_) => HttpResponse::InternalServerError()
-            .json(json!({"status": "fail", "token": "failed to generate token"})),
+        Ok(token_str) => {
+            Ok(HttpResponse::Ok().json(json!({"status": "success", "token": token_str})))
+        }
+        Err(_) => Err(AppError::InternalError {
+            message: "failed to generate token".to_string(),
+        }),
     }
 }
 
@@ -100,31 +108,26 @@ async fn login_user_handler(
 async fn get_me_handler(
     opt_claims: Option<web::ReqData<Claims>>,
     data: web::Data<AppState>,
-) -> impl Responder {
+) -> Result<HttpResponse, AppError> {
     let opt_user = match opt_claims {
         Some(claim) => get_user_by_email(&claim.email, &data.pool).await.unwrap(),
         None => None,
     };
 
-    match opt_user {
-        Some(user) => {
-            let json_response = serde_json::json!({
-                "status":  "success",
-                "data": serde_json::json!({
-                    "user": filter_user_record(&user)
-                })
-            });
+    let user = opt_user.ok_or_else(|| AppError::BadRequest {
+        message: "email is not found".to_string(),
+    });
 
-            HttpResponse::Ok().json(json_response)
+    match user {
+        Ok(u) => {
+            let json_response: GeneralResponse<FilteredUser> = GeneralResponse {
+                status: "success".to_string(),
+                message: "succesfully get current user".to_string(),
+                data: Some(filter_user_record(&u)),
+            };
+            Ok(HttpResponse::Ok().json(json_response))
         }
-        None => {
-            let json_response = serde_json::json!({
-                "status":  "fail",
-                "data": format!("User is not found")
-            });
-
-            HttpResponse::InternalServerError().json(json_response)
-        }
+        Err(e) => Err(e),
     }
 }
 
