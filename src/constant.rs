@@ -1,2 +1,2 @@
-pub const TEMP_PATH: &str  = ".temp";
-pub const ASSETS_PATH: &str  = ".assets";
+pub const TEMP_PATH: &str = ".temp";
+pub const ASSETS_PATH: &str = ".assets";

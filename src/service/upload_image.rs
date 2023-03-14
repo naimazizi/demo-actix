@@ -4,6 +4,7 @@ use image_compressor::compressor::Compressor;
 use image_compressor::Factor;
 use log::{error, info};
 use mime::{Mime, IMAGE_GIF, IMAGE_JPEG, IMAGE_PNG};
+use slug::slugify;
 use std::{
     error::Error,
     path::{Path, PathBuf},
@@ -11,10 +12,8 @@ use std::{
 use tokio::fs;
 use tokio::io::AsyncWriteExt as _;
 use uuid::Uuid;
-use slug::slugify;
 
-use crate::constant::{TEMP_PATH, ASSETS_PATH};
-
+use crate::constant::{ASSETS_PATH, TEMP_PATH};
 
 pub async fn upload_images(mut payload: Multipart) -> Result<(), Box<dyn Error>> {
     let max_file_count: usize = 3;
