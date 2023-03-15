@@ -1,8 +1,7 @@
 use std::sync::Arc;
 
-use rustls::{ClientConfig, OwnedTrustAnchor, RootCertStore};
 use awc::{http::header, Client, Connector};
-
+use rustls::{ClientConfig, OwnedTrustAnchor, RootCertStore};
 
 /// Create simple rustls client config from root certificates.
 pub fn rustls_config() -> ClientConfig {
@@ -21,12 +20,12 @@ pub fn rustls_config() -> ClientConfig {
         .with_no_client_auth()
 }
 
-pub fn init(tls_client_config: Arc::<ClientConfig>) -> Client {
+pub fn init(tls_client_config: Arc<ClientConfig>) -> Client {
     let client = Client::builder()
-            // Wikipedia requires a User-Agent header to make requests
-            .add_default_header((header::USER_AGENT, "actix_demo/1.0"))
-            // a "connector" wraps the stream into an encrypted connection
-            .connector(Connector::new().rustls(tls_client_config))
-            .finish();
+        // Wikipedia requires a User-Agent header to make requests
+        .add_default_header((header::USER_AGENT, "actix_demo/1.0"))
+        // a "connector" wraps the stream into an encrypted connection
+        .connector(Connector::new().rustls(tls_client_config))
+        .finish();
     client
 }

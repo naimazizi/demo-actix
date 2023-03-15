@@ -35,6 +35,8 @@ impl error::ResponseError for AppError {
 }
 impl From<sqlx::Error> for AppError {
     fn from(_error: sqlx::Error) -> AppError {
-        AppError::InternalError { message: (_error.to_string()) }
+        AppError::InternalError {
+            message: (_error.to_string()),
+        }
     }
 }

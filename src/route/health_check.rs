@@ -1,5 +1,9 @@
 use actix_multipart::Multipart;
-use actix_web::{get, post, web::{self}, HttpResponse, Responder};
+use actix_web::{
+    get, post,
+    web::{self},
+    HttpResponse, Responder,
+};
 use log::{error, info};
 
 use crate::{
@@ -10,11 +14,15 @@ use crate::{
 
 #[get("/health_check")]
 pub async fn ping(state: web::Data<AppState>) -> impl Responder {
-    let pong = ping_service::ping(state).await.map_err(|_e| {
+    let pong = ping_service::ping(&state).await.map_err(|_e| {
         error!("Error in pinging database");
         HttpResponse::InternalServerError().finish()
     });
-    info!("Succes in pinging database");
+    let pong_mail = &state.mailer.test_connection().await.unwrap();
+    info!(
+        "Succes in pinging database, Success in pinging mail: {:?}",
+        pong_mail
+    );
     HttpResponse::Ok().body(format!(
         "Hello world! Succesfully connected to Database! Query Results: {}",
         &pong.unwrap().col1
@@ -35,10 +43,10 @@ pub async fn upload_image(payload: Multipart) -> impl Responder {
     HttpResponse::Ok().json(resp)
 }
 
-
 #[get("/image")]
 pub async fn get_image(state: web::Data<AppState>) -> impl Responder {
-    let map_url = "https://upload.wikimedia.org/wikipedia/commons/f/ff/Pizigani_1367_Chart_10MB.jpg";
+    let map_url =
+        "https://upload.wikimedia.org/wikipedia/commons/f/ff/Pizigani_1367_Chart_10MB.jpg";
     let mut res = state.http_client.get(map_url).send().await.unwrap();
 
     if !res.status().is_success() {

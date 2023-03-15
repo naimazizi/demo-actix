@@ -34,3 +34,5 @@ mime = "0.3.16"
 slug = "0.1.4"
 futures-util = "0.3.25"
 derive_more = "0.99.17"
+tera = "1.18"
+lettre = { version = "0.10", default-features = false, features = ["smtp-transport", "hostname", "builder", "async-std1-rustls-tls"] }

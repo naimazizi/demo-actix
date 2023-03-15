@@ -119,7 +119,9 @@ async fn get_me_handler(
             };
             Ok(HttpResponse::Ok().json(json_response))
         }
-        Err(e) => Err(AppError::InternalError { message: (e.to_string()) }),
+        Err(e) => Err(AppError::InternalError {
+            message: (e.to_string()),
+        }),
     }
 }
 
