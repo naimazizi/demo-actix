@@ -38,22 +38,14 @@ async fn register_user_handler(
         .hash_password(body.password.as_bytes(), &salt)
         .expect("Error while hashing password")
         .to_string();
-    let query_result = insert_new_user(&body.name, &body.email, &hashed_password, &data.pool).await;
+    let user = insert_new_user(&body.name, &body.email, &hashed_password, &data.pool).await?;
+    let user_response = GeneralResponse {
+        status: "success".to_string(),
+        message: "succesfully get current user".to_string(),
+        data: Some(filter_user_record(&user)),
+    };
 
-    match query_result {
-        Ok(u) => {
-            let user_response = GeneralResponse {
-                status: "success".to_string(),
-                message: "succesfully get current user".to_string(),
-                data: Some(filter_user_record(&u)),
-            };
-
-            return Ok(HttpResponse::Ok().json(user_response));
-        }
-        Err(e) => Err(AppError::InternalError {
-            message: e.to_string(),
-        }),
-    }
+    Ok(HttpResponse::Ok().json(user_response))
 }
 
 fn filter_user_record(user: &User) -> FilteredUser {
@@ -74,7 +66,7 @@ async fn login_user_handler(
     body: web::Json<LoginUserSchema>,
     data: web::Data<AppState>,
 ) -> Result<HttpResponse, AppError> {
-    let query_result = get_user_by_email(&body.email, &data.pool).await.unwrap();
+    let query_result = get_user_by_email(&body.email, &data.pool).await?;
 
     let is_valid = query_result.to_owned().map_or(false, |user| {
         let parsed_hash = PasswordHash::new(&user.password).unwrap();
@@ -110,7 +102,7 @@ async fn get_me_handler(
     data: web::Data<AppState>,
 ) -> Result<HttpResponse, AppError> {
     let opt_user = match opt_claims {
-        Some(claim) => get_user_by_email(&claim.email, &data.pool).await.unwrap(),
+        Some(claim) => get_user_by_email(&claim.email, &data.pool).await?,
         None => None,
     };
 
@@ -127,7 +119,7 @@ async fn get_me_handler(
             };
             Ok(HttpResponse::Ok().json(json_response))
         }
-        Err(e) => Err(e),
+        Err(e) => Err(AppError::InternalError { message: (e.to_string()) }),
     }
 }
 

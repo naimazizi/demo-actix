@@ -51,5 +51,5 @@ pub async fn insert_new_user(
         .await
         .expect(format!("Error in creating users, email: {}", email).as_str());
 
-    Ok(get_user_by_email(email, pool).await.unwrap().unwrap())
+    Ok(get_user_by_email(email, pool).await?.unwrap())
 }
