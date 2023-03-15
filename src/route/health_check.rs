@@ -1,5 +1,5 @@
 use actix_multipart::Multipart;
-use actix_web::{get, post, web, HttpResponse, Responder};
+use actix_web::{get, post, web::{self}, HttpResponse, Responder};
 use log::{error, info};
 
 use crate::{
@@ -33,4 +33,27 @@ pub async fn upload_image(payload: Multipart) -> impl Responder {
         data: None,
     };
     HttpResponse::Ok().json(resp)
+}
+
+
+#[get("/image")]
+pub async fn get_image(state: web::Data<AppState>) -> impl Responder {
+    let map_url = "https://upload.wikimedia.org/wikipedia/commons/f/ff/Pizigani_1367_Chart_10MB.jpg";
+    let mut res = state.http_client.get(map_url).send().await.unwrap();
+
+    if !res.status().is_success() {
+        log::error!("Wikipedia did not return expected image");
+        return HttpResponse::InternalServerError().finish();
+    }
+
+    let payload = res
+        .body()
+        // expected image is larger than default body limit
+        .limit(20_000_000) // 20MB
+        .await
+        .unwrap();
+
+    HttpResponse::Ok()
+        .content_type(mime::IMAGE_JPEG)
+        .body(payload)
 }

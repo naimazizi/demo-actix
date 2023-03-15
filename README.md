@@ -42,7 +42,7 @@ docker compose up
 - [x] Image Upload & compression
 - [x] Static file serving
 - [x] Error handling
-- [ ] Consume external API
+- [x] Consume external API
 - [ ] Send Email
 - [ ] Database performance tuning
 - [ ] Cache
