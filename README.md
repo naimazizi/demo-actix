@@ -43,6 +43,8 @@ docker compose up
 - [x] Static file serving
 - [x] Error handling
 - [x] Consume external API
-- [ ] Send Email
+- [x] Send Email
+- [ ] Email templating
+- [ ] Swagger
 - [ ] Database performance tuning
 - [ ] Cache

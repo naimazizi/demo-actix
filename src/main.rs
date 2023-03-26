@@ -14,7 +14,6 @@ use lettre::{AsyncSmtpTransport, AsyncStd1Executor};
 pub mod config;
 pub mod constant;
 pub mod dao;
-pub mod dto;
 pub mod model;
 pub mod route;
 pub mod service;
@@ -50,7 +49,11 @@ async fn main() -> std::io::Result<()> {
                 http_client: config::http_client::init(Arc::clone(&tls_client_config)),
                 mailer: mailer.clone(),
             }))
-            .service(scope("/api").configure(route::auth::config))
+            .service(scope("/api")
+                .service(route::public_data::get_public_data)
+                .configure(route::auth::config)
+                .configure(route::public_data::config_secured)    
+            )
             .service(route::health_check::ping)
             .service(route::health_check::upload_image)
             .service(route::health_check::get_image)

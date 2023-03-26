@@ -106,12 +106,8 @@ async fn get_me_handler(
         None => None,
     };
 
-    let user = opt_user.ok_or_else(|| AppError::BadRequest {
-        message: "email is not found".to_string(),
-    });
-
-    match user {
-        Ok(u) => {
+    match opt_user {
+        Some(u) => {
             let json_response: GeneralResponse<FilteredUser> = GeneralResponse {
                 status: "success".to_string(),
                 message: "succesfully get current user".to_string(),
@@ -119,8 +115,8 @@ async fn get_me_handler(
             };
             Ok(HttpResponse::Ok().json(json_response))
         }
-        Err(e) => Err(AppError::InternalError {
-            message: (e.to_string()),
+        None => Err(AppError::BadRequest {
+            message: format!("user is not found."),
         }),
     }
 }
