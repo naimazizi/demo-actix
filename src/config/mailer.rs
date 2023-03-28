@@ -1,5 +1,6 @@
 use lettre::transport::smtp::authentication::Credentials;
 use lettre::{AsyncSmtpTransport, AsyncStd1Executor};
+use tera::Tera;
 
 use crate::config::config::Config;
 
@@ -15,4 +16,9 @@ pub fn init(config: &Config) -> AsyncSmtpTransport<AsyncStd1Executor> {
             .credentials(creds)
             .build();
     mailer
+}
+
+pub fn init_templating() -> Tera {
+    let tera = Tera::new("templates/**/*.html").unwrap();
+    tera
 }

@@ -1,10 +1,8 @@
 use actix_multipart::Multipart;
-use actix_web::{
-    get, post,
-    web::{self},
-    HttpResponse, Responder,
-};
+use actix_web::{get, post, web, HttpResponse, Responder};
+use lettre::{message::MessageBuilder, AsyncTransport};
 use log::{error, info};
+use tera::Context;
 
 use crate::{
     model::response::GeneralResponse,
@@ -22,11 +20,26 @@ pub async fn ping(state: web::Data<AppState>) -> impl Responder {
         error!("Error in pinging database");
         HttpResponse::InternalServerError().finish()
     });
-    let pong_mail = &state.mailer.test_connection().await.unwrap();
-    info!(
-        "Succes in pinging database, Success in pinging mail: {:?}",
-        pong_mail
-    );
+
+    let email_text = &state
+        .tera
+        .render("email_registration_confirmation.html", &Context::new())
+        .unwrap();
+
+    let to_email = "cyber.virion@gmail.com";
+
+    let email = MessageBuilder::new()
+        .to(to_email.parse().unwrap())
+        .from(to_email.parse().unwrap())
+        .subject("Hi, Hello world")
+        .body(String::from(email_text))
+        .unwrap();
+
+    match &state.mailer.send(email).await {
+        Ok(_) => info!("Email sent"),
+        Err(e) => error!("Error sending email: {:?}", e),
+    }
+
     HttpResponse::Ok().body(format!(
         "Hello world! Succesfully connected to Database! Query Results: {}",
         &pong.unwrap().col1

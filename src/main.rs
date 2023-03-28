@@ -25,6 +25,7 @@ pub struct AppState {
     env: Config,
     http_client: awc::Client,
     mailer: AsyncSmtpTransport<AsyncStd1Executor>,
+    tera: tera::Tera,
 }
 
 #[actix_web::main]
@@ -36,6 +37,7 @@ async fn main() -> std::io::Result<()> {
     let pool = config::database::establish_connection(&config).await;
     let tls_client_config = Arc::new(config::http_client::rustls_config());
     let mailer = config::mailer::init(&config);
+    let tera = config::mailer::init_templating();
     let app_host = &config.app_host.to_owned();
     let app_port = &config.app_port.to_owned();
     let app_workers = config.app_workers.to_owned();
@@ -48,6 +50,7 @@ async fn main() -> std::io::Result<()> {
                 env: config.clone(),
                 http_client: config::http_client::init(Arc::clone(&tls_client_config)),
                 mailer: mailer.clone(),
+                tera: tera.clone(),
             }))
             .service(
                 scope("/api")
