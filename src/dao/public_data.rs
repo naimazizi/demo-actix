@@ -28,10 +28,11 @@ pub async fn upsert(
     Ok(get_by_key(key, pool).await?.unwrap())
 }
 
-pub async fn delete_by_key(key: &str, pool: &sqlx::MySqlPool) -> Result<bool, sqlx::Error> {
-    let query_result = sqlx::query!("DELETE FROM public_data WHERE `key` = ?", &key.to_string())
+pub async fn delete_by_key(key: &str, pool: &sqlx::MySqlPool) -> Result<(), sqlx::Error> {
+    let _ = sqlx::query("DELETE FROM public_data WHERE `key` = ?")
+        .bind(key)
         .execute(pool)
         .await;
 
-    query_result.map(|_| true)
+    Ok(())
 }
