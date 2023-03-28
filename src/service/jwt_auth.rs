@@ -26,6 +26,10 @@ impl Claims {
             exp: (Utc::now() + Duration::hours(JWT_EXPIRATION_HOURS)).timestamp(),
         }
     }
+
+    pub fn is_expired(&self) -> bool {
+        Utc::now().timestamp() > self.exp
+    }
 }
 
 /// Create a json web token (JWT)
@@ -40,6 +44,12 @@ pub fn decode_jwt(token: &str, jwt_secret_key: &String) -> Result<Claims, Error>
     let decoding_key = DecodingKey::from_secret(jwt_secret_key.as_ref());
     jsonwebtoken::decode::<Claims>(token, &decoding_key, &Validation::default())
         .map(|data| data.claims)
+        .map(|claims| {
+            if claims.is_expired() {
+                ErrorUnauthorized("Token is expired");
+            }
+            claims
+        })
         .map_err(|e| ErrorUnauthorized(e.to_string()))
 }
 

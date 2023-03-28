@@ -1,12 +1,12 @@
 use actix_multipart::Multipart;
 use actix_web::{get, post, web, HttpResponse, Responder};
-use lettre::{message::MessageBuilder, AsyncTransport};
 use log::{error, info};
 use tera::Context;
 
 use crate::{
     model::response::GeneralResponse,
     service::{
+        email,
         errors::{AppError, AppErrorType},
         ping_service,
         upload_image::upload_images,
@@ -21,24 +21,20 @@ pub async fn ping(state: web::Data<AppState>) -> impl Responder {
         HttpResponse::InternalServerError().finish()
     });
 
-    let email_text = &state
+    let email_body = &state
         .tera
         .render("email_registration_confirmation.html", &Context::new())
         .unwrap();
 
     let to_email = "cyber.virion@gmail.com";
 
-    let email = MessageBuilder::new()
-        .to(to_email.parse().unwrap())
-        .from(to_email.parse().unwrap())
-        .subject("Hi, Hello world")
-        .body(String::from(email_text))
-        .unwrap();
-
-    match &state.mailer.send(email).await {
-        Ok(_) => info!("Email sent"),
-        Err(e) => error!("Error sending email: {:?}", e),
-    }
+    let _ = email::send_email(
+        to_email,
+        "Registration Confirmation",
+        email_body,
+        &state.mailer,
+    )
+    .await;
 
     HttpResponse::Ok().body(format!(
         "Hello world! Succesfully connected to Database! Query Results: {}",
