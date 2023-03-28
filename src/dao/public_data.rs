@@ -1,7 +1,5 @@
 use crate::model::public_data::PublicData;
 
-
-
 pub async fn get_by_key(
     key: &str,
     pool: &sqlx::MySqlPool,
@@ -25,7 +23,15 @@ pub async fn upsert(
         .bind(key)
         .bind(value)
         .execute(pool)
-        .await?;
+        .await;
 
     Ok(get_by_key(key, pool).await?.unwrap())
+}
+
+pub async fn delete_by_key(key: &str, pool: &sqlx::MySqlPool) -> Result<bool, sqlx::Error> {
+    let query_result = sqlx::query!("DELETE FROM public_data WHERE `key` = ?", &key.to_string())
+        .execute(pool)
+        .await;
+
+    query_result.map(|_| true)
 }

@@ -8,7 +8,11 @@ use log::{error, info};
 
 use crate::{
     model::response::GeneralResponse,
-    service::{errors::AppError, ping_service, upload_image::upload_images},
+    service::{
+        errors::{AppError, AppErrorType},
+        ping_service,
+        upload_image::upload_images,
+    },
     AppState,
 };
 
@@ -32,8 +36,12 @@ pub async fn ping(state: web::Data<AppState>) -> impl Responder {
 #[post("/upload")]
 pub async fn upload_image(payload: Multipart) -> impl Responder {
     let is_success = upload_images(payload).await;
-    _ = is_success.map_err(|e| AppError::InternalError {
-        message: e.to_string(),
+    _ = is_success.map_err(|e| {
+        return AppError {
+            cause: Some(e.to_string()),
+            status: AppErrorType::InternalError,
+            message: Some("Failed to upload image".to_string()),
+        };
     });
     let resp: GeneralResponse<()> = GeneralResponse {
         status: "success".to_string(),

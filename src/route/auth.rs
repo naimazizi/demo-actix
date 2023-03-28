@@ -14,7 +14,7 @@ use crate::{
         user::{LoginUserSchema, RegisterUserSchema, User},
     },
     service::{
-        errors::AppError,
+        errors::{AppError, AppErrorType},
         jwt_auth::{create_jwt, validator, Claims},
     },
     AppState,
@@ -28,8 +28,10 @@ async fn register_user_handler(
     let exists: bool = check_existing_user(&body.email, &data.pool).await;
 
     if exists {
-        return Err(AppError::BadRequest {
-            message: "User with that email already exists".to_string(),
+        return Err(AppError {
+            cause: None,
+            message: Some("User with that email already exists".to_string()),
+            status: AppErrorType::BadRequest,
         });
     }
 
@@ -38,14 +40,24 @@ async fn register_user_handler(
         .hash_password(body.password.as_bytes(), &salt)
         .expect("Error while hashing password")
         .to_string();
-    let user = insert_new_user(&body.name, &body.email, &hashed_password, &data.pool).await?;
-    let user_response = GeneralResponse {
-        status: "success".to_string(),
-        message: "succesfully get current user".to_string(),
-        data: Some(filter_user_record(&user)),
-    };
+    let user = insert_new_user(&body.name, &body.email, &hashed_password, &data.pool).await;
 
-    Ok(HttpResponse::Ok().json(user_response))
+    match user {
+        Ok(u) => {
+            let user_response = GeneralResponse {
+                status: "success".to_string(),
+                message: "succesfully get current user".to_string(),
+                data: Some(filter_user_record(&u)),
+            };
+
+            Ok(HttpResponse::Ok().json(user_response))
+        }
+        Err(e) => {
+            let mut err = AppError::from(e);
+            err.message = Some(format!("Failed to insert user {}", &body.email));
+            Err(err)
+        }
+    }
 }
 
 fn filter_user_record(user: &User) -> FilteredUser {
@@ -76,8 +88,10 @@ async fn login_user_handler(
     });
 
     if !is_valid {
-        return Err(AppError::BadRequest {
-            message: "Invalid email or password".to_string(),
+        return Err(AppError {
+            cause: None,
+            message: Some("Invalid email or password".to_string()),
+            status: AppErrorType::BadRequest,
         });
     }
 
@@ -89,8 +103,10 @@ async fn login_user_handler(
         Ok(token_str) => {
             Ok(HttpResponse::Ok().json(json!({"status": "success", "token": token_str})))
         }
-        Err(_) => Err(AppError::InternalError {
-            message: "failed to generate token".to_string(),
+        Err(e) => Err(AppError {
+            cause: Some(e.to_string()),
+            message: Some("failed to generate token".to_string()),
+            status: AppErrorType::BadRequest,
         }),
     }
 }
@@ -115,8 +131,10 @@ async fn get_me_handler(
             };
             Ok(HttpResponse::Ok().json(json_response))
         }
-        None => Err(AppError::BadRequest {
-            message: format!("user is not found."),
+        None => Err(AppError {
+            cause: None,
+            message: Some("User is not found".to_string()),
+            status: AppErrorType::BadRequest,
         }),
     }
 }
