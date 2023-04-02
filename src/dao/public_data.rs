@@ -25,7 +25,7 @@ pub async fn upsert(
         .execute(pool)
         .await;
 
-    Ok(get_by_key(key, pool).await?.unwrap())
+    Ok(get_by_key(key, pool).await?.expect("Failed to get public data after upsert"))
 }
 
 pub async fn delete_by_key(key: &str, pool: &sqlx::MySqlPool) -> Result<(), sqlx::Error> {

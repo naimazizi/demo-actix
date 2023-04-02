@@ -6,6 +6,7 @@ use actix_web::{
     HttpResponse,
 };
 use derive_more::{Display, Error};
+use lettre::address::AddressError;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Display, Serialize, Deserialize, Clone)]
@@ -48,6 +49,15 @@ impl From<sqlx::Error> for AppError {
             cause: Some(_error.to_string()),
             message: Some("Error in querying to database".to_string()),
             status: AppErrorType::InternalError,
+        }
+    }
+}
+impl From<AddressError> for AppError {
+    fn from(_error: AddressError) -> AppError {
+        AppError {
+            cause: Some(_error.to_string()),
+            status: AppErrorType::InternalError,
+            message: Some("Failed to parse email address".to_string()),
         }
     }
 }

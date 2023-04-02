@@ -12,9 +12,9 @@ pub struct User {
     pub photo: String,
     pub verified: i8,
     #[serde(rename = "createdAt")]
-    pub created_at: Option<DateTime<Utc>>,
+    pub created_at: DateTime<Utc>,
     #[serde(rename = "updatedAt")]
-    pub updated_at: Option<DateTime<Utc>>,
+    pub updated_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Deserialize)]

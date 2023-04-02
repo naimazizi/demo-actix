@@ -1,5 +1,5 @@
 use lettre::{
-    message::{header::ContentType, MessageBuilder},
+    message::{header::ContentType, MessageBuilder, Mailbox},
     AsyncSmtpTransport, AsyncStd1Executor, AsyncTransport,
 };
 use log::{error, info};
@@ -7,14 +7,14 @@ use log::{error, info};
 use super::errors::{AppError, AppErrorType};
 
 pub async fn send_email(
-    to_email: &str,
+    to_email: Mailbox,
     subject: &str,
     body: &str,
     mailer: &AsyncSmtpTransport<AsyncStd1Executor>,
 ) -> Result<(), AppError> {
     let email = MessageBuilder::new()
-        .to(to_email.parse().unwrap())
-        .from(to_email.parse().unwrap())
+        .to(to_email.to_owned())
+        .from(to_email.to_owned())
         .subject(subject)
         .header(ContentType::TEXT_HTML)
         .body(String::from(body))

@@ -25,7 +25,7 @@ async fn register_user_handler(
     body: web::Json<RegisterUserSchema>,
     data: web::Data<AppState>,
 ) -> Result<HttpResponse, AppError> {
-    let exists: bool = check_existing_user(&body.email, &data.pool).await;
+    let exists: bool = check_existing_user(&body.email, &data.pool).await?;
 
     if exists {
         return Err(AppError {
@@ -68,8 +68,8 @@ fn filter_user_record(user: &User) -> FilteredUser {
         photo: user.photo.to_owned(),
         role: user.role.to_owned(),
         verified: user.verified,
-        createdAt: user.created_at.unwrap(),
-        updatedAt: user.updated_at.unwrap(),
+        createdAt: user.created_at,
+        updatedAt: user.updated_at,
     }
 }
 
@@ -80,22 +80,33 @@ async fn login_user_handler(
 ) -> Result<HttpResponse, AppError> {
     let query_result = get_user_by_email(&body.email, &data.pool).await?;
 
-    let is_valid = query_result.to_owned().map_or(false, |user| {
-        let parsed_hash = PasswordHash::new(&user.password).unwrap();
-        Argon2::default()
-            .verify_password(body.password.as_bytes(), &parsed_hash)
+    let opt_user = query_result.to_owned().map_or(None, |user| {
+        let parsed_hash = PasswordHash::new(&user.password);
+        let is_password_valid = match parsed_hash {
+            Ok(pwd_hash) => {
+                Argon2::default()
+            .verify_password(body.password.as_bytes(), &pwd_hash)
             .map_or(false, |_| true)
+            },
+            Err(_) => false,
+        };
+        match is_password_valid {
+            true => Some(user),
+            false => None,
+        }
     });
 
-    if !is_valid {
-        return Err(AppError {
-            cause: None,
-            message: Some("Invalid email or password".to_string()),
-            status: AppErrorType::BadRequest,
-        });
-    }
+    let user = match opt_user {
+        Some(u) => u,
+        None => {
+            return Err(AppError {
+                cause: None,
+                message: Some("Invalid email or password".to_string()),
+                status: AppErrorType::BadRequest,
+            })
+        }
+    };
 
-    let user = query_result.unwrap();
 
     let claims = Claims::new(user.email.to_owned(), vec![user.role.to_owned()]);
     let token = create_jwt(claims, &data.env.jwt_secret);

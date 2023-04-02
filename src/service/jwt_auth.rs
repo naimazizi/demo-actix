@@ -58,7 +58,7 @@ pub async fn validator(
     credentials: BearerAuth,
 ) -> Result<ServiceRequest, (Error, ServiceRequest)> {
     // We just get permissions from JWT
-    let data = req.app_data::<web::Data<AppState>>().unwrap();
+    let data = req.app_data::<web::Data<AppState>>().expect("AppState is not found");
     let result = decode_jwt(credentials.token(), &data.env.jwt_secret);
     match result {
         Ok(claims) => {

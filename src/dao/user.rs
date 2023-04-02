@@ -2,15 +2,14 @@ use crate::model::user::User;
 use sqlx::Row;
 use uuid::Uuid;
 
-pub async fn check_existing_user(email: &str, pool: &sqlx::MySqlPool) -> bool {
+pub async fn check_existing_user(email: &str, pool: &sqlx::MySqlPool) -> Result<bool, sqlx::Error> {
     let exists: bool = sqlx::query("SELECT EXISTS(SELECT 1 FROM users WHERE email = ?)")
         .bind(email)
         .fetch_one(pool)
-        .await
-        .unwrap()
+        .await?
         .get(0);
 
-    exists
+    Ok(exists)
 }
 
 pub async fn get_user_by_email(
@@ -51,5 +50,5 @@ pub async fn insert_new_user(
         .await
         .expect(format!("Error in creating users, email: {}", email).as_str());
 
-    Ok(get_user_by_email(email, pool).await?.unwrap())
+    Ok(get_user_by_email(email, pool).await?.expect("Failed to get user after insert"))
 }

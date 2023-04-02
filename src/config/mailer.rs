@@ -12,13 +12,13 @@ pub fn init(config: &Config) -> AsyncSmtpTransport<AsyncStd1Executor> {
 
     let mailer: AsyncSmtpTransport<AsyncStd1Executor> =
         AsyncSmtpTransport::<AsyncStd1Executor>::starttls_relay(config.smtp_url.as_str())
-            .unwrap()
+            .expect("Failed to create SMTP client")
             .credentials(creds)
             .build();
     mailer
 }
 
 pub fn init_templating() -> Tera {
-    let tera = Tera::new("./templates/**/*.html").unwrap();
+    let tera = Tera::new("./templates/**/*.html").expect("Failed to create Tera instance");
     tera
 }

@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{sync::Arc, path::Path};
 
 use actix_files as fs;
 use actix_web::{
@@ -11,6 +11,7 @@ use dotenv::dotenv;
 use env_logger::Env;
 use lettre::{AsyncSmtpTransport, AsyncStd1Executor};
 use sqlx::migrate::Migrator;
+use tokio::fs::create_dir;
 
 pub mod config;
 pub mod constant;
@@ -44,8 +45,13 @@ async fn main() -> std::io::Result<()> {
     let app_host = &config.app_host.to_owned();
     let app_port = &config.app_port.to_owned();
     let app_workers = config.app_workers.to_owned();
+    let assets_folder = format!("./{}", ASSETS_PATH);
 
     MIGRATOR.run(&pool).await.expect("Failed to run DB migrations");
+
+    if !Path::new(&assets_folder).exists() {
+        create_dir(&assets_folder).await?
+    }
 
     HttpServer::new(move || {
         App::new()
@@ -66,7 +72,7 @@ async fn main() -> std::io::Result<()> {
             .service(route::health_check::ping)
             .service(route::health_check::upload_image)
             .service(route::health_check::get_image)
-            .service(fs::Files::new("/assets", format!("./{}", ASSETS_PATH)).show_files_listing())
+            .service(fs::Files::new("/assets", &assets_folder).show_files_listing())
     })
     .bind(format!("{}:{}", app_host, app_port))?
     .workers(app_workers)

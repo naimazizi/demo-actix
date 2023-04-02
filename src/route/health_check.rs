@@ -1,6 +1,7 @@
 use actix_multipart::Multipart;
 use actix_web::{get, post, web, HttpResponse, Responder};
-use log::{error};
+use lettre::{message::Mailbox, Address};
+use log::error;
 use tera::Context;
 
 use crate::{
@@ -15,7 +16,7 @@ use crate::{
 };
 
 #[get("/health_check")]
-pub async fn ping(state: web::Data<AppState>) -> impl Responder {
+pub async fn ping(state: web::Data<AppState>) -> Result<HttpResponse, AppError> {
     let pong = ping_service::ping(&state).await.map_err(|_e| {
         error!("Error in pinging database");
         HttpResponse::InternalServerError().finish()
@@ -24,9 +25,14 @@ pub async fn ping(state: web::Data<AppState>) -> impl Responder {
     let email_body = &state
         .tera
         .render("email_registration_confirmation.html", &Context::new())
-        .unwrap();
+        .expect("Tera failed to render email_registration_confirmation.html");
 
-    let to_email = "cyber.virion@gmail.com";
+
+    let to_address = "cyber.virion@gmail.com".parse::<Address>()?;
+    let to_email = Mailbox::new(
+        Some("Cyber Virion".to_string()),
+        to_address,
+    );
 
     let _ = email::send_email(
         to_email,
@@ -36,10 +42,10 @@ pub async fn ping(state: web::Data<AppState>) -> impl Responder {
     )
     .await;
 
-    HttpResponse::Ok().body(format!(
+    Ok(HttpResponse::Ok().body(format!(
         "Hello world! Succesfully connected to Database! Query Results: {}",
         &pong.unwrap().col1
-    ))
+    )))
 }
 
 #[post("/upload")]
