@@ -13,8 +13,7 @@ RUN cargo chef cook --release --recipe-path recipe.json
 COPY . .
 RUN cargo build --release --bin actix-demo
 
-# We do not need the Rust toolchain to run the binary!
-FROM debian:bullseye-slim AS runtime
+FROM gcr.io/distroless/cc-debian11 AS runtime
 WORKDIR /app
-COPY --from=builder /app/target/release/actix-demo /usr/local/bin
+COPY --from=builder /app/target/release/actix-demo /usr/local/bin/actix-demo
 CMD ["/usr/local/bin/actix-demo"]
