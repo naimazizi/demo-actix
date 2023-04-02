@@ -1,6 +1,6 @@
-# Demo Actix-web + Diesel + MySQL
+# Demo Actix-web + SQLx + MySQL
 
-Demo of a simple project using actix-web + SQLX + MariaDB
+Demo of a simple project using actix-web + SQLx + MariaDB
 
 ## Getting Started
 
@@ -15,7 +15,7 @@ cargo install sqlx-cli
 cargo build
 ```
 
-Create Database using diesel:
+Migrate database schema:
 
 ``` bash
 sqlx migrate run
@@ -30,7 +30,7 @@ cargo run
 ### Running using-docker
 
 ``` bash
-docker compose up
+docker-compose up
 ```
 
 ### TODO List
@@ -44,7 +44,7 @@ docker compose up
 - [x] Error handling
 - [x] Consume external API
 - [x] Send Email
-- [ ] Email templating
+- [x] Email templating
 - [ ] Swagger
 - [ ] Database performance tuning
 - [ ] Cache

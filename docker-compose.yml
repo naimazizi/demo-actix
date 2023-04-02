@@ -16,12 +16,14 @@ services:
     networks:
       - db-net
 
-  core-api: 
+  core-api:
     container_name: core-api
     restart: always
     build:
       context: .
       dockerfile: Dockerfile
+    volumes:
+      - './:/app'
     environment:
       - DATABASE_URL=mysql://root:root@core-db:3306/actix_demo
     ports:

@@ -17,8 +17,4 @@ RUN cargo build --release --bin actix-demo
 FROM debian:bullseye-slim AS runtime
 WORKDIR /app
 COPY --from=builder /app/target/release/actix-demo /usr/local/bin
-COPY .env.docker .env
-COPY migrations migrations
-COPY templates templates
-RUN mkdir -p .assets
 CMD ["/usr/local/bin/actix-demo"]
