@@ -1,6 +1,6 @@
 use actix_multipart::Multipart;
 use actix_web::{get, post, web, HttpResponse, Responder};
-use log::{error, info};
+use log::{error};
 use tera::Context;
 
 use crate::{

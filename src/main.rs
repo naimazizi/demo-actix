@@ -10,6 +10,7 @@ use config::config::Config;
 use dotenv::dotenv;
 use env_logger::Env;
 use lettre::{AsyncSmtpTransport, AsyncStd1Executor};
+use sqlx::migrate::Migrator;
 
 pub mod config;
 pub mod constant;
@@ -19,6 +20,8 @@ pub mod route;
 pub mod service;
 
 use crate::constant::ASSETS_PATH;
+
+static MIGRATOR: Migrator = sqlx::migrate!("./migrations");
 
 pub struct AppState {
     pool: sqlx::MySqlPool,
@@ -41,6 +44,8 @@ async fn main() -> std::io::Result<()> {
     let app_host = &config.app_host.to_owned();
     let app_port = &config.app_port.to_owned();
     let app_workers = config.app_workers.to_owned();
+
+    MIGRATOR.run(&pool).await.expect("Failed to run DB migrations");
 
     HttpServer::new(move || {
         App::new()

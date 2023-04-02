@@ -19,6 +19,6 @@ pub fn init(config: &Config) -> AsyncSmtpTransport<AsyncStd1Executor> {
 }
 
 pub fn init_templating() -> Tera {
-    let tera = Tera::new("templates/**/*.html").unwrap();
+    let tera = Tera::new("./templates/**/*.html").unwrap();
     tera
 }
